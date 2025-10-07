@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS sinners;
 
 CREATE TABLE sinners (
-    id             BIGINT PRIMARY KEY,
+    code           BIGINT PRIMARY KEY,
     "name"         VARCHAR(20) NOT NULL,
     class          CHAR(1) NOT NULL,
     libram         VARCHAR(20),
@@ -23,7 +23,7 @@ BEFORE UPDATE ON sinners
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
-INSERT INTO sinners (id, "name", class, libram, tendency)
+INSERT INTO sinners (code, "name", class, libram, tendency)
 VALUES
     (14, 'Deren', 'S', 'Fraud', 'Fury'),
     (17, 'Shalom', 'S', 'Sloth', 'Reticle');
