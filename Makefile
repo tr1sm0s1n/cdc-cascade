@@ -4,6 +4,9 @@ ifneq (,$(wildcard ./.env))
 endif
 
 COMPOSE := docker compose
+GO ?= go
+GOFMT ?= gofmt "-s"
+GOFILES := $(shell find . -name "*.go")
 
 .PHONY: help
 ## help: Display available targets.
@@ -28,4 +31,14 @@ down:
 ## enter: Enter the database.
 .PHONY: enter
 enter:
-	@docker exec -it tda-postgres psql -d $(DB_NAME) -U $(DB_USER) -W
+	@docker exec -it $(DB_HOST) psql -d $(DB_NAME) -U $(DB_USER) -W
+
+.PHONY: tidy
+## tidy: Clean and tidy dependencies.
+tidy:
+	@$(GO) mod tidy -v
+
+.PHONY: fmt
+## fmt: Format Go files.
+fmt:
+	@$(GOFMT) -w $(GOFILES)
