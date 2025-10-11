@@ -5,7 +5,7 @@ networks:
 services:
   postgres:
     image: postgres:latest
-    container_name: tda-postgres
+    container_name: ${DB_HOST}
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${DB_USER}
@@ -30,7 +30,7 @@ services:
 
   redis:
     image: redis/redis-stack:latest
-    container_name: tda-redis
+    container_name: ${REDIS_HOST}
     restart: unless-stopped
     environment:
       REDIS_ARGS: "--requirepass ${REDIS_PASS}"
@@ -42,6 +42,31 @@ services:
       - tda-network
     volumes:
       - tda-redis-volume:/data
+
+  api:
+    build: .
+    image: tda-api
+    container_name: tda-api
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      - postgres
+      - redis
+    entrypoint: './bin/api'
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - REDIS_PASS=${REDIS_PASS}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - API_PORT=${API_PORT}
+    ports:
+      - ${API_PORT}:${API_PORT}
+    networks:
+      - tda-network
 
 volumes:
   tda-postgres-volume:
