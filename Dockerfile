@@ -28,12 +28,13 @@ FROM alpine AS runner
 # Working directory for runtime
 WORKDIR /app
 
-# Install tzdata for timezone handling
-RUN apk add --no-cache tzdata
+# Install tzdata for timezone handling, curl for Debezium setup
+RUN apk add --no-cache tzdata curl
 ENV TZ=Asia/Kolkata
 
 # Copy binaries from builder
 COPY --from=builder /src/api ./bin/api
+COPY --from=builder /src/scripts ./opt/scripts
 
 # Set environment variables to use a writable cache directory
 ENV GOCACHE=/app/.cache/go-build
