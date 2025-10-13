@@ -52,6 +52,8 @@ services:
     depends_on:
       - postgres
       - redis
+      - kafka
+      - debezium
     entrypoint: './bin/api'
     environment:
       - DB_USER=${DB_USER}
@@ -59,6 +61,8 @@ services:
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
       - DB_NAME=${DB_NAME}
+      - DEBEZIUM_HOST=${DEBEZIUM_HOST}
+      - DEBEZIUM_PORT=${DEBEZIUM_PORT}
       - REDIS_PASS=${REDIS_PASS}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
@@ -68,8 +72,61 @@ services:
     networks:
       - tda-network
 
+  kafka:
+    image: apache/kafka:latest
+    container_name: ${KAFKA_HOST}
+    restart: unless-stopped
+    environment:
+      - KAFKA_NODE_ID=0
+      - KAFKA_LOG_DIRS=/var/lib/kafka/data/logs
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_LISTENERS=PLAINTEXT://:${KAFKA_BROKER_PORT},CONTROLLER://:${KAFKA_CONTROLLER_PORT}
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=0@kafka:${KAFKA_CONTROLLER_PORT}
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:${KAFKA_BROKER_PORT}
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
+      - KAFKA_NUM_PARTITIONS=5
+    expose:
+      - ${KAFKA_BROKER_PORT}
+      - ${KAFKA_CONTROLLER_PORT}
+    networks:
+      - tda-network
+    volumes:
+      - tda-kafka-volume:/var/lib/kafka/data
+
+  debezium:
+    image: quay.io/debezium/connect:latest
+    container_name: ${DEBEZIUM_HOST}
+    environment:
+      BOOTSTRAP_SERVERS: kafka:${KAFKA_BROKER_PORT}
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: debezium_configs
+      OFFSET_STORAGE_TOPIC: debezium_offsets
+      STATUS_STORAGE_TOPIC: debezium_statuses
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+    expose:
+      - ${DEBEZIUM_PORT}
+    depends_on:
+      - kafka
+      - postgres
+    networks:
+      - tda-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:${DEBEZIUM_PORT}/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   tda-postgres-volume:
     name: tda-postgres-volume
   tda-redis-volume:
     name: tda-redis-volume
+  tda-kafka-volume:
+    name: tda-kafka-volume
