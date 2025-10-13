@@ -45,8 +45,8 @@ services:
 
   api:
     build: .
-    image: tda-api
-    container_name: tda-api
+    image: ${API_HOST}
+    container_name: ${API_HOST}
     restart: unless-stopped
     stop_grace_period: 30s
     depends_on:
