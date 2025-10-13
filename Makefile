@@ -33,6 +33,11 @@ down:
 enter:
 	@docker exec -it $(DB_HOST) psql -d $(DB_NAME) -U $(DB_USER) -W
 
+## connect: Create Debezium connector for DB.
+.PHONY: connect
+connect:
+	@docker exec -it $(API_HOST) sh ./opt/scripts/debezium-setup.sh
+
 .PHONY: tidy
 ## tidy: Clean and tidy dependencies.
 tidy:
