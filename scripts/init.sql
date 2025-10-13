@@ -27,3 +27,5 @@ INSERT INTO sinners (code, "name", class, libram, tendency)
 VALUES
     (14, 'Deren', 'S', 'Fraud', 'Fury'),
     (17, 'Shalom', 'S', 'Sloth', 'Reticle');
+
+CREATE PUBLICATION dbz_publication FOR ALL TABLES;
