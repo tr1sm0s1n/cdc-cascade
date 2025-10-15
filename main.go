@@ -5,16 +5,19 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 	"tr1sm0s1n/tda/config"
 	"tr1sm0s1n/tda/controllers"
+	"tr1sm0s1n/tda/queue"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 func main() {
+	var wg sync.WaitGroup
 	c := make(chan os.Signal, 1)
 
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -24,6 +27,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("\033[31m[ERR]\033[0m Error: %v", err)
 	}
+
+	cdc := &queue.CDC{
+		Ctx:   ctx,
+		Wg:    &wg,
+		Redis: db.Redis,
+	}
+
+	wg.Add(1)
+	go queue.Runner(cdc, queue.StartCDC)
 
 	app := setupApp(db)
 
@@ -41,7 +53,21 @@ func main() {
 		log.Printf("\033[31m[ERR]\033[0m Server shutdown error: %v", err)
 	}
 
-	log.Println("\033[33m[INF]\033[0m Server shutdown complete.")
+	log.Println("\033[33m[WRN]\033[0m Waiting for consumers...")
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		log.Println("\033[32m[INF]\033[0m All consumers stopped gracefully.")
+	case <-time.After(5 * time.Second):
+		log.Println("\033[31m[ERR]\033[0m Timeout waiting for consumers to stop.")
+	}
+
+	log.Println("\033[32m[INF]\033[0m Server shutdown complete.")
 }
 
 func setupApp(db *config.DBConn) *fiber.App {
