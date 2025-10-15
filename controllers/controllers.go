@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"log"
 	"strconv"
-	"tr1sm0s1n/tda/config"
-	"tr1sm0s1n/tda/models"
+	"tr1sm0s1n/cdc-cascade/config"
+	"tr1sm0s1n/cdc-cascade/models"
 
 	"github.com/gofiber/fiber/v2"
 )

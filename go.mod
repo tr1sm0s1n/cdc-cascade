@@ -1,4 +1,4 @@
-module tr1sm0s1n/tda
+module tr1sm0s1n/cdc-cascade
 
 go 1.25.2
 

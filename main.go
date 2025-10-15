@@ -8,9 +8,9 @@ import (
 	"sync"
 	"syscall"
 	"time"
-	"tr1sm0s1n/tda/config"
-	"tr1sm0s1n/tda/controllers"
-	"tr1sm0s1n/tda/queue"
+	"tr1sm0s1n/cdc-cascade/config"
+	"tr1sm0s1n/cdc-cascade/controllers"
+	"tr1sm0s1n/cdc-cascade/queue"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
