@@ -29,15 +29,13 @@ services:
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   redis:
-    image: redis/redis-stack:latest
+    image: redis:latest
     container_name: ${REDIS_HOST}
     restart: unless-stopped
     environment:
       REDIS_ARGS: "--requirepass ${REDIS_PASS}"
     expose:
       - ${REDIS_PORT}
-    ports:
-      - ${REDIS_UI_PORT}:${REDIS_UI_PORT}
     networks:
       - tda-network
     volumes:
