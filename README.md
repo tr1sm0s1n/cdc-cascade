@@ -16,35 +16,7 @@ This repository demonstrates a complete CDC pipeline with a practical architectu
 
 ## Architecture
 
-### Read Flow (Cache-Aside Pattern)
-
-**First Read (Cache Miss):**
-
-```
-Client → Fiber API → PostgreSQL
-                  ↓
-                Redis (stores result in background)
-                  ↓
-                Client (receives data)
-```
-
-**Second Read (Cache Hit):**
-
-```
-Client → Fiber API → Redis → Client
-```
-
-### Write Flow (Cache Invalidation via CDC)
-
-**When Table Updated:**
-
-```
-PostgreSQL → Debezium → Kafka → CDC Consumer → Redis (CLEARS cache)
-```
-
-After invalidation, the next read becomes a "First Read" again, ensuring fresh data from PostgreSQL and repopulating the cache.
-
-**Key Insight:** Redis serves as a read-through cache that's automatically invalidated when source data changes. The CDC pipeline ensures cache consistency without manual invalidation logic in your application code.
+View the [complete sequence flow diagram](docs/diagrams/sequence-flows.mmd) showing all interaction patterns: cache miss, cache hit, CDC invalidation, and cache rebuild.
 
 ---
 

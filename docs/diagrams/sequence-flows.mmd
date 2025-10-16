@@ -1,0 +1,53 @@
+%% CDC Cascade - Sequence Flows
+%% File: sequence-flows.mmd
+%% Detailed interaction flows between components
+
+sequenceDiagram
+    autonumber
+    
+    participant Client
+    participant API as Fiber API
+    participant Redis as Redis Cache
+    participant Postgres as PostgreSQL
+    participant Debezium
+    participant Kafka
+    participant Consumer as CDC Consumer
+
+    Note over Client, Consumer: Scenario 1: First Read (Cache Miss)
+    
+    Client->>API: GET /api/v1/sinners/read/626
+    API->>Redis: GET 626
+    Redis-->>API: nil (Cache Miss)
+    API->>Postgres: SELECT * FROM sinners WHERE code=626
+    Postgres-->>API: Sinner Data
+    API-->>Client: 200 OK + Sinner Data
+    API--)Redis: SET 626 (async background)
+
+    Note over Client, Consumer: Scenario 2: Subsequent Read (Cache Hit)
+    
+    Client->>API: GET /api/v1/sinners/read/626
+    API->>Redis: GET 626
+    Redis-->>API: Cached Sinner Data
+    API-->>Client: 200 OK + Sinner Data (Fast!)
+
+    Note over Client, Consumer: Scenario 3: Database Update with CDC
+    
+    Note right of Postgres: External app updates sinner
+    Postgres->>Postgres: UPDATE sinners SET name='Jane' WHERE code=626
+    Postgres->>Postgres: Write to WAL
+    Postgres->>Debezium: Stream WAL Change Event
+    Debezium->>Kafka: Publish to topic: $DB_HOST.public.sinners
+    Kafka->>Consumer: Consume Change Event
+    Consumer->>Consumer: Parse event payload
+    Consumer->>Redis: DEL 626 (invalidate)
+    Redis-->>Consumer: OK
+
+    Note over Client, Consumer: Scenario 4: First Read After Invalidation
+    
+    Client->>API: GET /api/v1/sinners/read/626
+    API->>Redis: GET 626
+    Redis-->>API: nil (Cache Invalidated)
+    API->>Postgres: SELECT * FROM sinners WHERE code=626
+    Postgres-->>API: Fresh Sinner Data (name='Jane')
+    API-->>Client: 200 OK + Fresh Data
+    API--)Redis: SET 626 (repopulate cache)
