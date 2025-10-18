@@ -16,7 +16,7 @@ This repository demonstrates a complete CDC pipeline with a practical architectu
 
 ## Architecture
 
-View the [complete sequence flow diagram](docs/diagrams/sequence-flows.mmd) showing all interaction patterns: cache miss, cache hit, CDC invalidation, and cache rebuild.
+View the [complete sequence flow diagram](/sequence-flows.mmd) showing all interaction patterns: cache miss, cache hit, CDC invalidation, and cache rebuild.
 
 ---
 
