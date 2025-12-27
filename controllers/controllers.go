@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"strconv"
@@ -9,15 +8,26 @@ import (
 	"tr1sm0s1n/cdc-cascade/models"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
-func CreateOne(c *fiber.Ctx, db *config.DBConn) error {
+type Controllers struct {
+	pg    *gorm.DB
+	redis *redis.Client
+}
+
+func NewControllers(db *config.DBConn) *Controllers {
+	return &Controllers{pg: db.Postgres, redis: db.Redis}
+}
+
+func (ct *Controllers) CreateOne(c *fiber.Ctx) error {
 	var sinner models.Sinner
 	if err := c.BodyParser(&sinner); err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	result := db.Postgres.Create(&sinner)
+	result := ct.pg.Create(&sinner)
 	if result.Error != nil {
 		return c.Status(fiber.StatusBadRequest).SendString(result.Error.Error())
 	}
@@ -25,9 +35,9 @@ func CreateOne(c *fiber.Ctx, db *config.DBConn) error {
 	return c.Status(fiber.StatusCreated).JSON(sinner)
 }
 
-func ReadAll(c *fiber.Ctx, db *config.DBConn) error {
+func (ct *Controllers) ReadAll(c *fiber.Ctx) error {
 	var sinners []models.Sinner
-	result := db.Postgres.Find(&sinners)
+	result := ct.pg.Find(&sinners)
 	if result.Error != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString(result.Error.Error())
 	}
@@ -35,7 +45,7 @@ func ReadAll(c *fiber.Ctx, db *config.DBConn) error {
 	return c.Status(fiber.StatusOK).JSON(sinners)
 }
 
-func ReadOne(c *fiber.Ctx, db *config.DBConn) error {
+func (ct *Controllers) ReadOne(c *fiber.Ctx) error {
 	var sinner models.Sinner
 	param := c.Params("code")
 	code, err := strconv.Atoi(param)
@@ -43,26 +53,26 @@ func ReadOne(c *fiber.Ctx, db *config.DBConn) error {
 		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	value := db.Redis.Get(context.Background(), param).Val()
+	value := ct.redis.Get(c.Context(), param).Val()
 	if len(value) != 0 {
 		json.Unmarshal([]byte(value), &sinner)
 		return c.Status(fiber.StatusOK).JSON(sinner)
 	}
 
-	result := db.Postgres.First(&sinner, "code = ?", code)
+	result := ct.pg.First(&sinner, "code = ?", code)
 	if result.Error != nil {
 		return c.Status(fiber.StatusNotFound).SendString("Not Found")
 	}
 
 	data, _ := json.Marshal(sinner)
-	if err := db.Redis.Set(context.Background(), param, data, 0).Err(); err != nil {
+	if err := ct.redis.Set(c.Context(), param, data, 0).Err(); err != nil {
 		log.Printf("\033[31m[ERR]\033[0m Redis Error: %v", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(sinner)
 }
 
-func UpdateOne(c *fiber.Ctx, db *config.DBConn) error {
+func (ct *Controllers) UpdateOne(c *fiber.Ctx) error {
 	var sinner models.Sinner
 	param := c.Params("code")
 	code, err := strconv.Atoi(param)
@@ -70,7 +80,7 @@ func UpdateOne(c *fiber.Ctx, db *config.DBConn) error {
 		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	result := db.Postgres.First(&sinner, "code = ?", code)
+	result := ct.pg.First(&sinner, "code = ?", code)
 	if result.Error != nil {
 		return c.Status(fiber.StatusNotFound).SendString("Not Found")
 	}
@@ -79,7 +89,7 @@ func UpdateOne(c *fiber.Ctx, db *config.DBConn) error {
 		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	result = db.Postgres.Save(&sinner)
+	result = ct.pg.Save(&sinner)
 	if result.Error != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString(result.Error.Error())
 	}
@@ -87,7 +97,7 @@ func UpdateOne(c *fiber.Ctx, db *config.DBConn) error {
 	return c.Status(fiber.StatusOK).JSON(sinner)
 }
 
-func DeleteOne(c *fiber.Ctx, db *config.DBConn) error {
+func (ct *Controllers) DeleteOne(c *fiber.Ctx) error {
 	var sinner models.Sinner
 	param := c.Params("code")
 	code, err := strconv.Atoi(param)
@@ -95,12 +105,12 @@ func DeleteOne(c *fiber.Ctx, db *config.DBConn) error {
 		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	result := db.Postgres.First(&sinner, "code = ?", code)
+	result := ct.pg.First(&sinner, "code = ?", code)
 	if result.Error != nil {
 		return c.Status(fiber.StatusNotFound).SendString("Not Found")
 	}
 
-	result = db.Postgres.Delete(&models.Sinner{}, code)
+	result = ct.pg.Delete(&models.Sinner{}, code)
 	if result.Error != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString(result.Error.Error())
 	}

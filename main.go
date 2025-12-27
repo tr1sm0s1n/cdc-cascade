@@ -76,27 +76,19 @@ func setupApp(db *config.DBConn) *fiber.App {
 	})
 	app.Use(logger.New())
 
+	ct := controllers.NewControllers(db)
+
 	api := app.Group("/api")
 	{
 		v1 := api.Group("/v1")
 		{
 			sinnerRoutes := v1.Group("/sinners")
 			{
-				sinnerRoutes.Post("/create", func(ctx *fiber.Ctx) error {
-					return controllers.CreateOne(ctx, db)
-				})
-				sinnerRoutes.Get("/read", func(ctx *fiber.Ctx) error {
-					return controllers.ReadAll(ctx, db)
-				})
-				sinnerRoutes.Get("/read/:code", func(ctx *fiber.Ctx) error {
-					return controllers.ReadOne(ctx, db)
-				})
-				sinnerRoutes.Put("/update/:code", func(ctx *fiber.Ctx) error {
-					return controllers.UpdateOne(ctx, db)
-				})
-				sinnerRoutes.Delete("/delete/:code", func(ctx *fiber.Ctx) error {
-					return controllers.DeleteOne(ctx, db)
-				})
+				sinnerRoutes.Post("/create", ct.CreateOne)
+				sinnerRoutes.Get("/read", ct.ReadAll)
+				sinnerRoutes.Get("/read/:code", ct.ReadOne)
+				sinnerRoutes.Put("/update/:code", ct.UpdateOne)
+				sinnerRoutes.Delete("/delete/:code", ct.DeleteOne)
 			}
 		}
 	}
